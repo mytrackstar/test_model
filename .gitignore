@@ -17,6 +17,8 @@ env/
 synthetic/
 plots/
 inference_plots/
+workout_plots/
+workout*.csv
 
 # Model artifacts (large binaries) – keep JSON metadata, exclude .pt weights
 artifacts/*.pt
