@@ -169,7 +169,17 @@ class RepCounter:
         """
         Push one ARM sensor frame (shape [N_FEATURES]) and the current exercise
         classification.  Returns the cumulative rep count.
+
+        "Rauschen" (or unknown exercises) act as a pause: the current rep count
+        is preserved and returned unchanged.  This prevents the counter from
+        resetting to 0 when the person finishes an exercise and the model briefly
+        sees rest movement.  A genuine exercise switch (e.g. Push ups → Kniebeuge)
+        still resets the counter.
         """
+        # Rauschen / unknown = pause: freeze count, do not reset
+        if exercise == "Rauschen" or exercise not in REP_SIGNAL_CONFIG:
+            return self._rep_count
+
         if exercise != self._exercise:
             self._exercise = exercise
             self._rep_count = 0
@@ -178,9 +188,6 @@ class RepCounter:
             self._last_counted_abs = -1
             # Warmup: ignore any peak in the first WARMUP_SAMPLES after detection
             self._warmup_end_abs = self.WARMUP_SAMPLES
-
-        if exercise == "Rauschen" or exercise not in REP_SIGNAL_CONFIG:
-            return 0
 
         self._buf.append(arm_row)
         self._total_pushed += 1
