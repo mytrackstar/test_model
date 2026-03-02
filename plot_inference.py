@@ -248,7 +248,8 @@ def plot_rep_counter(res: pd.DataFrame, true_label: str, out: Path):
     final = int(reps[-1]) if len(reps) else 0
     ax.set_ylabel("Wiederholungen")
     ax.set_xlabel("Zeit (s)")
-    ax.set_title(f"Gezählte Reps: {final}")
+    peak = int(np.max(reps)) if len(reps) else 0
+    ax.set_title(f"Gezählte Reps: {peak}  (Endwert nach Reset: {final})")
     ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
 
     fig.tight_layout(rect=[0, 0, 1, 0.96])
@@ -347,7 +348,7 @@ def main(data_dir: str, artifacts_dir: str, out_dir: str, threshold: float):
 
         # Accuracy: fraction of inference frames where predicted == true_label
         correct     = (res["exercise"] == true_label).mean() * 100
-        final_reps  = int(res["reps"].iloc[-1])
+        final_reps  = int(res["reps"].max())
 
         all_results.append({
             "fname":        f.stem,
