@@ -138,10 +138,16 @@ class RepCounter:
 
     Uses an absolute sample counter so peaks are never double-counted even
     as the ring buffer scrolls.
+
+    A warmup window (WARMUP_SAMPLES) is applied every time the exercise changes:
+    peaks that fall inside the warmup window are consumed (so they can never be
+    double-counted later) but are NOT added to the rep total.  This prevents
+    the initial "get-into-position" movement from being counted as a rep.
     """
 
-    BUFFER_SIZE = 500   # ~5 s @ 100 Hz
-    FS = 50.0           # approximate sample rate after ARM-only stream
+    BUFFER_SIZE    = 500   # ~5 s @ 100 Hz
+    FS             = 50.0  # approximate sample rate after ARM-only stream
+    WARMUP_SAMPLES = 100   # ~2 s – ignore peaks while getting into position
 
     def __init__(self):
         self._buf: deque[np.ndarray] = deque(maxlen=self.BUFFER_SIZE)
@@ -149,6 +155,7 @@ class RepCounter:
         self._rep_count: int = 0
         self._total_pushed: int = 0          # absolute ARM sample counter
         self._last_counted_abs: int = -1     # absolute index of last counted peak
+        self._warmup_end_abs: int = 0        # peaks before this index are not counted
 
     def reset(self):
         self._buf.clear()
@@ -156,6 +163,7 @@ class RepCounter:
         self._rep_count = 0
         self._total_pushed = 0
         self._last_counted_abs = -1
+        self._warmup_end_abs = 0
 
     def push(self, arm_row: np.ndarray, exercise: str) -> int:
         """
@@ -168,6 +176,8 @@ class RepCounter:
             self._buf.clear()
             self._total_pushed = 0
             self._last_counted_abs = -1
+            # Warmup: ignore any peak in the first WARMUP_SAMPLES after detection
+            self._warmup_end_abs = self.WARMUP_SAMPLES
 
         if exercise == "Rauschen" or exercise not in REP_SIGNAL_CONFIG:
             return 0
@@ -197,10 +207,12 @@ class RepCounter:
 
         for p in peaks:
             abs_pos = buf_start_abs + int(p)
-            # Only count peaks strictly newer than the last counted one
             if abs_pos > self._last_counted_abs:
-                self._rep_count += 1
+                # Always advance so this peak is never double-counted later
                 self._last_counted_abs = abs_pos
+                # Only increment counter once warmup has expired
+                if abs_pos >= self._warmup_end_abs:
+                    self._rep_count += 1
 
         return self._rep_count
 
