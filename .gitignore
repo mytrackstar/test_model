@@ -16,6 +16,7 @@ env/
 # Large generated files – regenerate with scripts
 synthetic/
 plots/
+inference_plots/
 
 # Model artifacts (large binaries) – keep JSON metadata, exclude .pt weights
 artifacts/*.pt
